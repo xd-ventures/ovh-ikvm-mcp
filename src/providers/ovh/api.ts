@@ -17,13 +17,17 @@ export class OvhApiClient {
 
 	constructor(config: OvhConfig) {
 		this.config = config;
-		const base = ENDPOINTS[config.endpoint];
-		if (!base) {
-			throw new Error(
-				`Unknown OVH endpoint: ${config.endpoint}. Valid: ${Object.keys(ENDPOINTS).join(", ")}`,
-			);
+		if (config.baseUrl) {
+			this.baseUrl = config.baseUrl;
+		} else {
+			const base = ENDPOINTS[config.endpoint];
+			if (!base) {
+				throw new Error(
+					`Unknown OVH endpoint: ${config.endpoint}. Valid: ${Object.keys(ENDPOINTS).join(", ")}`,
+				);
+			}
+			this.baseUrl = base;
 		}
-		this.baseUrl = base;
 	}
 
 	/** Sync local time with OVH server time (call once before making requests). */
@@ -32,7 +36,7 @@ export class OvhApiClient {
 		if (!res.ok) {
 			throw new Error(`Failed to sync time: ${res.status} ${res.statusText}`);
 		}
-		const serverTime = await res.json();
+		const serverTime = (await res.json()) as number;
 		this.timeDelta = serverTime - Math.floor(Date.now() / 1000);
 	}
 
