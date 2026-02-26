@@ -121,7 +121,7 @@ The server starts on `http://localhost:3001/mcp` by default.
 
 #### Claude Desktop
 
-Add to your Claude Desktop MCP config (`~/.claude/claude_desktop_config.json`):
+Add to your Claude Desktop MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
 
 ```json
 {
