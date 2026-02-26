@@ -120,31 +120,63 @@ bun start
 
 The server starts on `http://localhost:3001/mcp` by default.
 
-### MCP Client Configuration
+### Using with AI Coding Agents
 
-#### Claude Desktop
+The server uses **Streamable HTTP** transport (not stdio), so all agents connect to it over HTTP. Start the server first, then configure your agent to point at it.
 
-Add to your Claude Desktop MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+**1. Start the server:**
+
+```bash
+cd ovh-ikvm-mcp
+export OVH_ENDPOINT="eu"
+export OVH_APPLICATION_KEY="your-app-key"
+export OVH_APPLICATION_SECRET="your-app-secret"
+export OVH_CONSUMER_KEY="your-consumer-key"
+bun start
+```
+
+You should see: `ikvm-mcp server listening on http://localhost:3001/mcp`
+
+**2. Configure your agent** (pick one):
+
+---
+
+#### Claude Code
+
+Register via the CLI:
+
+```bash
+claude mcp add ikvm --transport http http://localhost:3001/mcp
+```
+
+Or add to your project's `.mcp.json` so teammates get it automatically:
 
 ```json
 {
   "mcpServers": {
     "ikvm": {
-      "url": "http://localhost:3001/mcp",
-      "env": {
-        "OVH_ENDPOINT": "eu",
-        "OVH_APPLICATION_KEY": "your-app-key",
-        "OVH_APPLICATION_SECRET": "your-app-secret",
-        "OVH_CONSUMER_KEY": "your-consumer-key"
-      }
+      "type": "http",
+      "url": "http://localhost:3001/mcp"
     }
   }
 }
 ```
 
-#### Claude Code
+Verify it's connected:
 
-Add to your Claude Code MCP settings:
+```bash
+claude mcp list
+```
+
+Make sure the OVH environment variables are set in the terminal where you run `bun start`.
+
+---
+
+#### Claude Desktop
+
+Add to your Claude Desktop MCP config:
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -156,7 +188,77 @@ Add to your Claude Code MCP settings:
 }
 ```
 
-Make sure the environment variables are set in the shell where Claude Code runs.
+After saving, restart Claude Desktop. The hammer icon in the input box confirms the MCP tools are loaded.
+
+---
+
+#### Cursor
+
+Add to `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
+
+```json
+{
+  "mcpServers": {
+    "ikvm": {
+      "url": "http://localhost:3001/mcp"
+    }
+  }
+}
+```
+
+After saving, open Cursor Settings > MCP and verify the `ikvm` server shows a green indicator.
+
+---
+
+#### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ikvm": {
+      "serverUrl": "http://localhost:3001/mcp"
+    }
+  }
+}
+```
+
+---
+
+### Example Prompts
+
+Once connected, you can use these prompts with any agent:
+
+**List servers and take a screenshot:**
+
+```
+List my bare metal servers using the ikvm MCP, then take a screenshot
+of the first server's console. Describe what you see on the screen.
+```
+
+**Debug a server that won't boot:**
+
+```
+My server ns1234567.ip-1-2-3.eu is stuck during boot. Take a screenshot
+of its console and diagnose the issue. If you see a kernel panic or
+GRUB error, suggest how to fix it.
+```
+
+**Monitor server state:**
+
+```
+Take a screenshot of ns1234567.ip-1-2-3.eu console. Is the server
+at a login prompt, showing an error, or still booting? If it's at
+a login prompt, the OS reinstall was successful.
+```
+
+**Compare raw vs optimized output:**
+
+```
+Take two screenshots of ns1234567.ip-1-2-3.eu — one default (optimized)
+and one with raw=true. Compare the readability.
+```
 
 ## Development
 
