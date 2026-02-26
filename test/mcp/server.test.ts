@@ -71,6 +71,7 @@ const TEST_PNG = Buffer.from(
 
 class MockProvider implements Provider {
 	readonly name = "mock";
+	screenshotError: Error | null = null;
 
 	async listServers(): Promise<Server[]> {
 		return [
@@ -80,6 +81,9 @@ class MockProvider implements Provider {
 	}
 
 	async getScreenshot(_serverId: string): Promise<Buffer> {
+		if (this.screenshotError) {
+			throw this.screenshotError;
+		}
 		return TEST_PNG;
 	}
 }
@@ -88,9 +92,10 @@ describe("MCP Server", () => {
 	let client: Client;
 	let serverTransport: Transport;
 	let clientTransport: Transport;
+	let mockProvider: MockProvider;
 
 	beforeAll(async () => {
-		const mockProvider = new MockProvider();
+		mockProvider = new MockProvider();
 		const mcpServer = createMcpServer(mockProvider);
 
 		[clientTransport, serverTransport] = createTransportPair();
@@ -158,5 +163,23 @@ describe("MCP Server", () => {
 		// Verify it's valid base64
 		const decoded = Buffer.from(content[0].data ?? "", "base64");
 		expect(decoded[0]).toBe(0x89); // PNG magic
+	});
+
+	it("should propagate provider errors as isError response", async () => {
+		mockProvider.screenshotError = new Error("IPMI access denied");
+		try {
+			const result = await client.callTool({
+				name: "get_screenshot",
+				arguments: { serverId: "server-1" },
+			});
+
+			// MCP SDK wraps tool errors as isError=true with text content
+			expect(result.isError).toBe(true);
+			const content = result.content as Array<{ type: string; text?: string }>;
+			expect(content[0].type).toBe("text");
+			expect(content[0].text).toContain("IPMI access denied");
+		} finally {
+			mockProvider.screenshotError = null;
+		}
 	});
 });
