@@ -2,7 +2,7 @@
  * OVH provider — implements the Provider interface for OVH dedicated servers.
  */
 
-import { captureScreenshot } from "../../vnc/screenshot.js";
+import { captureKvmScreenshot } from "../../kvm/screenshot.js";
 import type { Provider, Server } from "../types.js";
 import { OvhApiClient } from "./api.js";
 import type { OvhConfig, OvhDedicatedServer, OvhIpmiAccess, OvhTask } from "./types.js";
@@ -84,46 +84,10 @@ export class OvhProvider implements Provider {
 			{ type: "kvmipHtml5URL" },
 		);
 
-		// 4. Extract WebSocket URL from viewer page and capture screenshot
-		const wsUrl = await this.extractWebSocketUrl(access.url);
-		const result = await captureScreenshot(wsUrl);
+		// 4. Capture screenshot via AMI KVM WebSocket
+		const result = await captureKvmScreenshot(access.value);
 
 		return result.png;
-	}
-
-	/** Extract the WebSocket VNC endpoint from the h5viewer page. */
-	private async extractWebSocketUrl(viewerUrl: string): Promise<string> {
-		// Fetch the viewer HTML page
-		const res = await fetch(viewerUrl);
-		if (!res.ok) {
-			throw new Error(`Failed to fetch viewer page: ${res.status}`);
-		}
-		const html = await res.text();
-
-		// Look for WebSocket URL patterns in the page source
-		// Common patterns: ws(s)://host:port/websockify, or embedded in JS config
-		const wsMatch = html.match(/wss?:\/\/[^"'\s]+\/websockify[^"'\s]*/);
-		if (wsMatch) {
-			return wsMatch[0];
-		}
-
-		// Try to find a host/port config and construct the WS URL
-		const hostMatch = html.match(/['"]?host['"]?\s*[:=]\s*['"]([^'"]+)['"]/);
-		const portMatch = html.match(/['"]?port['"]?\s*[:=]\s*['"]?(\d+)['"]?/);
-		const pathMatch = html.match(/['"]?path['"]?\s*[:=]\s*['"]([^'"]+)['"]/);
-
-		if (hostMatch) {
-			const host = hostMatch[1];
-			const port = portMatch ? portMatch[1] : "443";
-			const path = pathMatch ? pathMatch[1] : "";
-			const proto = port === "443" ? "wss" : "ws";
-			const pathPart = path ? `/${path}` : "";
-			return `${proto}://${host}:${port}${pathPart}`;
-		}
-
-		// Fallback: construct from the viewer URL's origin
-		const url = new URL(viewerUrl);
-		return `wss://${url.host}/websockify`;
 	}
 
 	/** Wait for an OVH async task to complete. */

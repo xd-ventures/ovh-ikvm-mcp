@@ -155,7 +155,7 @@ export class MockOvhApi {
 					return Response.json({ message: "No IPMI access" }, { status: 404 });
 				}
 				return Response.json({
-					url: viewerUrl,
+					value: viewerUrl,
 					type: url.searchParams.get("type") ?? "kvmipHtml5URL",
 					expiration: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
 				});

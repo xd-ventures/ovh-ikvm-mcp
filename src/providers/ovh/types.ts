@@ -24,7 +24,7 @@ export interface OvhDedicatedServer {
 
 /** IPMI access response */
 export interface OvhIpmiAccess {
-	readonly url: string;
+	readonly value: string;
 	readonly expiration?: string;
 }
 

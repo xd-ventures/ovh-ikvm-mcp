@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { OvhProvider } from "../../../src/providers/ovh/provider.js";
+import { MockBmcServer } from "../../helpers/mock-bmc-server.js";
 import { MockOvhApi } from "../../helpers/mock-ovh-api.js";
-import { TestVncServer } from "../../helpers/vnc-server.js";
 
 describe("OvhProvider.listServers", () => {
 	let mockApi: MockOvhApi;
@@ -84,47 +84,21 @@ describe("OvhProvider.listServers", () => {
 
 describe("OvhProvider.getScreenshot", () => {
 	let mockApi: MockOvhApi;
-	let vncServer: TestVncServer;
-	let mockViewerServer: ReturnType<typeof Bun.serve> | null = null;
+	let bmcServer: MockBmcServer;
 	let provider: OvhProvider;
 
 	beforeAll(() => {
-		// Start a test VNC server that serves a known image
-		vncServer = new TestVncServer({
+		// Start a mock BMC server that serves a test JPEG frame
+		bmcServer = new MockBmcServer({
 			width: 320,
 			height: 240,
 			fillColor: [255, 0, 0],
+			sessionCookie: "test-session-id",
+			csrfToken: "test-csrf",
 		});
-		vncServer.start();
+		const bmcUrl = bmcServer.start();
 
-		// Start a mock viewer HTML page that references the VNC WebSocket
-		mockViewerServer = Bun.serve({
-			port: 0,
-			fetch(req) {
-				const url = new URL(req.url);
-				if (url.pathname === "/viewer.html") {
-					return new Response(
-						`<!DOCTYPE html>
-<html>
-<head><title>KVM Viewer</title></head>
-<body>
-<script>
-var host = "localhost";
-var port = "${vncServer.port}";
-var path = "";
-</script>
-</body>
-</html>`,
-						{ headers: { "Content-Type": "text/html" } },
-					);
-				}
-				return new Response("Not Found", { status: 404 });
-			},
-		});
-
-		const viewerUrl = `http://localhost:${mockViewerServer.port}/viewer.html`;
-
-		// Start mock OVH API that returns the viewer URL
+		// The mock OVH API returns the BMC viewer URL
 		mockApi = new MockOvhApi({
 			servers: ["test-server"],
 			serverDetails: {
@@ -135,7 +109,7 @@ var path = "";
 				},
 			},
 			viewerUrls: {
-				"test-server": viewerUrl,
+				"test-server": `${bmcUrl}/viewer`,
 			},
 			autoCompleteTasks: true,
 		});
@@ -159,10 +133,7 @@ var path = "";
 
 	afterAll(() => {
 		mockApi.stop();
-		vncServer.stop();
-		if (mockViewerServer) {
-			mockViewerServer.stop(true);
-		}
+		bmcServer.stop();
 	});
 
 	it("should capture a screenshot and return PNG buffer", async () => {
@@ -276,108 +247,5 @@ describe("OvhProvider.waitForTask edge cases", () => {
 
 		await expect(promise).rejects.toThrow("ovhError");
 		mockApi.stop();
-	});
-});
-
-describe("OvhProvider.extractWebSocketUrl", () => {
-	it("should extract direct wss:// URL from viewer HTML", async () => {
-		const mockViewerServer = Bun.serve({
-			port: 0,
-			fetch(req) {
-				const url = new URL(req.url);
-				if (url.pathname === "/viewer.html") {
-					return new Response(
-						`<html><body><script>var wsUrl = "wss://kvm.example.com:443/websockify?token=abc";</script></body></html>`,
-						{ headers: { "Content-Type": "text/html" } },
-					);
-				}
-				return new Response("Not Found", { status: 404 });
-			},
-		});
-
-		const mockApi = new MockOvhApi({
-			servers: ["ws-server"],
-			serverDetails: {
-				"ws-server": { name: "ws-server", datacenter: "sbg3", ip: "1.2.3.4" },
-			},
-			viewerUrls: {
-				"ws-server": `http://localhost:${mockViewerServer.port}/viewer.html`,
-			},
-			autoCompleteTasks: true,
-		});
-		const baseUrl = mockApi.start();
-
-		const provider = new OvhProvider(
-			{
-				endpoint: "eu",
-				applicationKey: "test-ak",
-				applicationSecret: "test-as",
-				consumerKey: "test-ck",
-				baseUrl,
-			},
-			{
-				publicIp: "127.0.0.1",
-				pollInterval: 10,
-				pollMaxAttempts: 5,
-			},
-		);
-
-		// getScreenshot will fail at the VNC connection stage, but we can verify
-		// the URL extraction worked by checking the error message
-		const promise = provider.getScreenshot("ws-server");
-		await expect(promise).rejects.toThrow(); // Will fail at VNC connect, which is fine
-
-		mockApi.stop();
-		mockViewerServer.stop(true);
-	});
-
-	it("should fall back to viewer URL origin when no WS patterns found", async () => {
-		const mockViewerServer = Bun.serve({
-			port: 0,
-			fetch(req) {
-				const url = new URL(req.url);
-				if (url.pathname === "/viewer.html") {
-					// HTML with no WebSocket URL, no host/port config — triggers fallback
-					return new Response("<html><body><p>Empty viewer page</p></body></html>", {
-						headers: { "Content-Type": "text/html" },
-					});
-				}
-				return new Response("Not Found", { status: 404 });
-			},
-		});
-
-		const mockApi = new MockOvhApi({
-			servers: ["fallback-server"],
-			serverDetails: {
-				"fallback-server": { name: "fallback-server", datacenter: "sbg3", ip: "1.2.3.4" },
-			},
-			viewerUrls: {
-				"fallback-server": `http://localhost:${mockViewerServer.port}/viewer.html`,
-			},
-			autoCompleteTasks: true,
-		});
-		const baseUrl = mockApi.start();
-
-		const provider = new OvhProvider(
-			{
-				endpoint: "eu",
-				applicationKey: "test-ak",
-				applicationSecret: "test-as",
-				consumerKey: "test-ck",
-				baseUrl,
-			},
-			{
-				publicIp: "127.0.0.1",
-				pollInterval: 10,
-				pollMaxAttempts: 5,
-			},
-		);
-
-		// Will fail at VNC connect with the fallback URL (wss://localhost:PORT/websockify)
-		const promise = provider.getScreenshot("fallback-server");
-		await expect(promise).rejects.toThrow();
-
-		mockApi.stop();
-		mockViewerServer.stop(true);
 	});
 });
