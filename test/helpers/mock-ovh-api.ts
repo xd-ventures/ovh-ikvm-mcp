@@ -41,6 +41,7 @@ interface TaskState {
 	taskId: number;
 	status: string;
 	serverId: string;
+	comment?: string;
 }
 
 export class MockOvhApi {
@@ -87,6 +88,15 @@ export class MockOvhApi {
 	completeTasks(): void {
 		for (const task of this.tasks.values()) {
 			task.status = "done";
+		}
+	}
+
+	/** Fail a specific task with a given status and optional comment. */
+	failTask(taskId: number, status: string, comment?: string): void {
+		const task = this.tasks.get(taskId);
+		if (task) {
+			task.status = status;
+			task.comment = comment;
 		}
 	}
 
@@ -172,6 +182,7 @@ export class MockOvhApi {
 				taskId: task.taskId,
 				function: "ipmiAccessSet",
 				status: task.status,
+				comment: task.comment ?? null,
 			});
 		}
 

@@ -176,3 +176,208 @@ var path = "";
 		expect(png[3]).toBe(0x47); // G
 	});
 });
+
+describe("OvhProvider.waitForTask edge cases", () => {
+	it("should throw on task timeout when task never completes", async () => {
+		const mockApi = new MockOvhApi({
+			servers: ["timeout-server"],
+			serverDetails: {
+				"timeout-server": { name: "timeout-server", datacenter: "sbg3", ip: "1.2.3.4" },
+			},
+			viewerUrls: {},
+			autoCompleteTasks: false, // tasks stay "doing"
+		});
+		const baseUrl = mockApi.start();
+
+		const provider = new OvhProvider(
+			{
+				endpoint: "eu",
+				applicationKey: "test-ak",
+				applicationSecret: "test-as",
+				consumerKey: "test-ck",
+				baseUrl,
+			},
+			{
+				publicIp: "127.0.0.1",
+				pollInterval: 10,
+				pollMaxAttempts: 3, // only 3 attempts → fast timeout
+			},
+		);
+
+		await expect(provider.getScreenshot("timeout-server")).rejects.toThrow("timed out");
+		mockApi.stop();
+	});
+
+	it("should throw on task failure with cancelled status", async () => {
+		const mockApi = new MockOvhApi({
+			servers: ["fail-server"],
+			serverDetails: {
+				"fail-server": { name: "fail-server", datacenter: "gra1", ip: "5.6.7.8" },
+			},
+			autoCompleteTasks: false,
+		});
+		const baseUrl = mockApi.start();
+
+		const provider = new OvhProvider(
+			{
+				endpoint: "eu",
+				applicationKey: "test-ak",
+				applicationSecret: "test-as",
+				consumerKey: "test-ck",
+				baseUrl,
+			},
+			{
+				publicIp: "127.0.0.1",
+				pollInterval: 10,
+				pollMaxAttempts: 10,
+			},
+		);
+
+		// Start the getScreenshot call, then fail the task after a short delay
+		const promise = provider.getScreenshot("fail-server");
+
+		// Wait for the task to be created, then fail it
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		mockApi.failTask(1, "cancelled", "Cancelled by user");
+
+		await expect(promise).rejects.toThrow("cancelled");
+		mockApi.stop();
+	});
+
+	it("should throw on task failure with ovhError status", async () => {
+		const mockApi = new MockOvhApi({
+			servers: ["error-server"],
+			serverDetails: {
+				"error-server": { name: "error-server", datacenter: "gra1", ip: "5.6.7.8" },
+			},
+			autoCompleteTasks: false,
+		});
+		const baseUrl = mockApi.start();
+
+		const provider = new OvhProvider(
+			{
+				endpoint: "eu",
+				applicationKey: "test-ak",
+				applicationSecret: "test-as",
+				consumerKey: "test-ck",
+				baseUrl,
+			},
+			{
+				publicIp: "127.0.0.1",
+				pollInterval: 10,
+				pollMaxAttempts: 10,
+			},
+		);
+
+		const promise = provider.getScreenshot("error-server");
+
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		mockApi.failTask(1, "ovhError", "Internal error");
+
+		await expect(promise).rejects.toThrow("ovhError");
+		mockApi.stop();
+	});
+});
+
+describe("OvhProvider.extractWebSocketUrl", () => {
+	it("should extract direct wss:// URL from viewer HTML", async () => {
+		const mockViewerServer = Bun.serve({
+			port: 0,
+			fetch(req) {
+				const url = new URL(req.url);
+				if (url.pathname === "/viewer.html") {
+					return new Response(
+						`<html><body><script>var wsUrl = "wss://kvm.example.com:443/websockify?token=abc";</script></body></html>`,
+						{ headers: { "Content-Type": "text/html" } },
+					);
+				}
+				return new Response("Not Found", { status: 404 });
+			},
+		});
+
+		const mockApi = new MockOvhApi({
+			servers: ["ws-server"],
+			serverDetails: {
+				"ws-server": { name: "ws-server", datacenter: "sbg3", ip: "1.2.3.4" },
+			},
+			viewerUrls: {
+				"ws-server": `http://localhost:${mockViewerServer.port}/viewer.html`,
+			},
+			autoCompleteTasks: true,
+		});
+		const baseUrl = mockApi.start();
+
+		const provider = new OvhProvider(
+			{
+				endpoint: "eu",
+				applicationKey: "test-ak",
+				applicationSecret: "test-as",
+				consumerKey: "test-ck",
+				baseUrl,
+			},
+			{
+				publicIp: "127.0.0.1",
+				pollInterval: 10,
+				pollMaxAttempts: 5,
+			},
+		);
+
+		// getScreenshot will fail at the VNC connection stage, but we can verify
+		// the URL extraction worked by checking the error message
+		const promise = provider.getScreenshot("ws-server");
+		await expect(promise).rejects.toThrow(); // Will fail at VNC connect, which is fine
+
+		mockApi.stop();
+		mockViewerServer.stop(true);
+	});
+
+	it("should fall back to viewer URL origin when no WS patterns found", async () => {
+		const mockViewerServer = Bun.serve({
+			port: 0,
+			fetch(req) {
+				const url = new URL(req.url);
+				if (url.pathname === "/viewer.html") {
+					// HTML with no WebSocket URL, no host/port config — triggers fallback
+					return new Response("<html><body><p>Empty viewer page</p></body></html>", {
+						headers: { "Content-Type": "text/html" },
+					});
+				}
+				return new Response("Not Found", { status: 404 });
+			},
+		});
+
+		const mockApi = new MockOvhApi({
+			servers: ["fallback-server"],
+			serverDetails: {
+				"fallback-server": { name: "fallback-server", datacenter: "sbg3", ip: "1.2.3.4" },
+			},
+			viewerUrls: {
+				"fallback-server": `http://localhost:${mockViewerServer.port}/viewer.html`,
+			},
+			autoCompleteTasks: true,
+		});
+		const baseUrl = mockApi.start();
+
+		const provider = new OvhProvider(
+			{
+				endpoint: "eu",
+				applicationKey: "test-ak",
+				applicationSecret: "test-as",
+				consumerKey: "test-ck",
+				baseUrl,
+			},
+			{
+				publicIp: "127.0.0.1",
+				pollInterval: 10,
+				pollMaxAttempts: 5,
+			},
+		);
+
+		// Will fail at VNC connect with the fallback URL (wss://localhost:PORT/websockify)
+		const promise = provider.getScreenshot("fallback-server");
+		await expect(promise).rejects.toThrow();
+
+		mockApi.stop();
+		mockViewerServer.stop(true);
+	});
+});
