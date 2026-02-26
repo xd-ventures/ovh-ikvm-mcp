@@ -7,6 +7,8 @@ export interface BmcSession {
 	readonly host: string;
 	readonly sessionCookie: string;
 	readonly csrfToken: string;
+	readonly kvmToken: string;
+	readonly clientIp: string;
 }
 
 /** Options for KVM screenshot capture. */

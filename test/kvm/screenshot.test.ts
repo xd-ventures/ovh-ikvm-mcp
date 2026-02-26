@@ -13,6 +13,8 @@ describe("captureKvmScreenshot", () => {
 			fillColor: [255, 0, 0],
 			sessionCookie: "test-session",
 			csrfToken: "test-csrf",
+			kvmToken: "test-kvm-token",
+			clientIp: "127.0.0.1",
 		});
 		const baseUrl = bmc.start();
 		viewerUrl = `${baseUrl}/viewer`;
@@ -67,5 +69,25 @@ describe("captureKvmScreenshot error handling", () => {
 		).rejects.toThrow("Failed to extract QSESSIONID");
 
 		badServer.stop(true);
+	});
+
+	it("should throw when KVM session validation is rejected", async () => {
+		const bmc = new MockBmcServer({
+			sessionCookie: "reject-session",
+			csrfToken: "reject-csrf",
+			kvmToken: "reject-token",
+			clientIp: "127.0.0.1",
+			rejectValidation: true,
+		});
+		const baseUrl = bmc.start();
+
+		await expect(
+			captureKvmScreenshot(`${baseUrl}/viewer`, {
+				connectTimeout: 5000,
+				frameTimeout: 5000,
+			}),
+		).rejects.toThrow("KVM session validation failed");
+
+		bmc.stop();
 	});
 });

@@ -27,7 +27,6 @@ function loadOvhConfig(): OvhConfig {
 async function main(): Promise<void> {
 	const ovhConfig = loadOvhConfig();
 	const provider = new OvhProvider(ovhConfig);
-	const mcpServer = createMcpServer(provider);
 
 	// Store active transports per session for proper lifecycle
 	const transports = new Map<string, WebStandardStreamableHTTPServerTransport>();
@@ -44,6 +43,9 @@ async function main(): Promise<void> {
 					if (existing) {
 						return existing.handleRequest(req);
 					}
+
+					// Each session gets its own McpServer instance
+					const mcpServer = createMcpServer(provider);
 
 					const transport = new WebStandardStreamableHTTPServerTransport({
 						sessionIdGenerator: () => crypto.randomUUID(),

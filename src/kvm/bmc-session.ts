@@ -2,30 +2,45 @@
  * BMC session establishment for AMI/ASRockRack firmware.
  *
  * The OVH IPMI viewer URL serves a redirect page that:
- * 1. Sets a QSESSIONID cookie (via Set-Cookie header or embedded JS)
- * 2. May include a CSRF token (garc) in embedded JavaScript
+ * 1. Sets a QSESSIONID cookie (via Set-Cookie header or URL token param)
+ * 2. Includes a CSRF token (garc) in embedded JavaScript
  * 3. Redirects to /viewer.html
  *
- * We parse these credentials to authenticate the KVM WebSocket connection.
+ * After extracting session credentials, we call the BMC's /api/kvm/token
+ * endpoint to obtain a one-time KVM authentication token.
  */
 
 import type { BmcSession } from "./types.js";
 
+interface KvmTokenResponse {
+	readonly client_ip: string;
+	readonly token: string;
+	readonly session: string;
+}
+
 /**
- * Establish a BMC session by fetching the viewer URL and extracting
- * the session cookie and CSRF token.
+ * Establish a BMC session by fetching the viewer URL, extracting
+ * session credentials, and obtaining a KVM authentication token.
  */
 export async function establishBmcSession(viewerUrl: string): Promise<BmcSession> {
-	const host = new URL(viewerUrl).host;
+	const parsedUrl = new URL(viewerUrl);
+	const host = parsedUrl.host;
+	const protocol = parsedUrl.protocol;
 
 	// Fetch with redirect: "manual" to capture Set-Cookie from the redirect page
 	const res = await fetch(viewerUrl, { redirect: "manual" });
 	const html = await res.text();
 
-	// Extract QSESSIONID from Set-Cookie header
+	// Extract QSESSIONID: prefer Set-Cookie header, then URL token param,
+	// then embedded JS patterns
 	let sessionCookie = extractCookieFromHeaders(res.headers);
 
-	// Fallback: extract from embedded JavaScript in the page
+	if (!sessionCookie) {
+		// The BMC viewer page sets QSESSIONID from the URL "token" query param:
+		//   document.cookie = "QSESSIONID=" + token;
+		sessionCookie = parsedUrl.searchParams.get("token") ?? "";
+	}
+
 	if (!sessionCookie) {
 		sessionCookie = extractCookieFromHtml(html);
 	}
@@ -37,7 +52,44 @@ export async function establishBmcSession(viewerUrl: string): Promise<BmcSession
 	// Extract CSRF token (garc) from embedded JavaScript
 	const csrfToken = extractCsrfToken(html);
 
-	return { host, sessionCookie, csrfToken };
+	// Activate the session by fetching /viewer.html (like a browser would)
+	await fetch(`${protocol}//${host}/viewer.html`, {
+		headers: { Cookie: `QSESSIONID=${sessionCookie}` },
+	}).catch(() => {
+		// Non-critical — some BMC firmwares don't require this step
+	});
+
+	// Get KVM authentication token from the BMC API
+	const { kvmToken, clientIp } = await fetchKvmToken(host, protocol, sessionCookie, csrfToken);
+
+	return { host, sessionCookie, csrfToken, kvmToken, clientIp };
+}
+
+/** Fetch a one-time KVM token from the BMC's /api/kvm/token endpoint. */
+async function fetchKvmToken(
+	host: string,
+	protocol: string,
+	sessionCookie: string,
+	csrfToken: string,
+): Promise<{ kvmToken: string; clientIp: string }> {
+	const headers: Record<string, string> = {
+		Cookie: `QSESSIONID=${sessionCookie}`,
+	};
+	if (csrfToken) {
+		headers["X-CSRFTOKEN"] = csrfToken;
+	}
+
+	const res = await fetch(`${protocol}//${host}/api/kvm/token`, {
+		headers,
+		redirect: "manual",
+	});
+
+	if (res.status !== 200) {
+		throw new Error(`Failed to get KVM token: HTTP ${res.status}`);
+	}
+
+	const data = (await res.json()) as KvmTokenResponse;
+	return { kvmToken: data.token, clientIp: data.client_ip };
 }
 
 /** Extract QSESSIONID from Set-Cookie response headers. */

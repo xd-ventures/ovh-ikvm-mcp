@@ -11,6 +11,8 @@ describe("establishBmcSession", () => {
 			bmc = new MockBmcServer({
 				sessionCookie: "abc123-session",
 				csrfToken: "csrf-xyz-789",
+				kvmToken: "kvm-tok-111",
+				clientIp: "10.0.0.1",
 			});
 			baseUrl = bmc.start();
 		});
@@ -33,6 +35,16 @@ describe("establishBmcSession", () => {
 			const session = await establishBmcSession(`${baseUrl}/viewer`);
 			expect(session.host).toBe(`localhost:${bmc.port}`);
 		});
+
+		it("should obtain KVM token from /api/kvm/token", async () => {
+			const session = await establishBmcSession(`${baseUrl}/viewer`);
+			expect(session.kvmToken).toBe("kvm-tok-111");
+		});
+
+		it("should obtain client IP from /api/kvm/token", async () => {
+			const session = await establishBmcSession(`${baseUrl}/viewer`);
+			expect(session.clientIp).toBe("10.0.0.1");
+		});
 	});
 
 	describe("with cookie embedded in JavaScript", () => {
@@ -43,6 +55,8 @@ describe("establishBmcSession", () => {
 			bmc = new MockBmcServer({
 				sessionCookie: "js-cookie-456",
 				csrfToken: "js-csrf-token",
+				kvmToken: "kvm-tok-222",
+				clientIp: "192.168.1.1",
 				cookieInJs: true,
 			});
 			baseUrl = bmc.start();
@@ -60,6 +74,11 @@ describe("establishBmcSession", () => {
 		it("should extract CSRF token from JavaScript source", async () => {
 			const session = await establishBmcSession(`${baseUrl}/viewer`);
 			expect(session.csrfToken).toBe("js-csrf-token");
+		});
+
+		it("should obtain KVM token from /api/kvm/token", async () => {
+			const session = await establishBmcSession(`${baseUrl}/viewer`);
+			expect(session.kvmToken).toBe("kvm-tok-222");
 		});
 	});
 });
