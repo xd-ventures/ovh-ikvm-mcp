@@ -52,13 +52,14 @@ List all available bare metal servers with iKVM/IPMI access.
 
 ### `get_screenshot`
 
-Capture a screenshot of a server's iKVM/IPMI console screen. Returns a PNG image of what is currently displayed on the server's physical monitor output.
+Capture a screenshot of a server's iKVM/IPMI console screen. Returns a PNG image optimized for LLM vision (2x upscale + brightness boost). Set `raw=true` to get the original unprocessed image.
 
 **Parameters:**
 
-| Name | Type | Description |
-|------|------|-------------|
-| `serverId` | string | Server identifier (e.g., `ns1234567.ip-1-2-3.eu`) |
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `serverId` | string | *(required)* | Server identifier (e.g., `ns1234567.ip-1-2-3.eu`) |
+| `raw` | boolean | `false` | Return the raw screenshot without LLM optimization |
 
 **Returns:** PNG image content block (base64-encoded)
 
@@ -205,7 +206,9 @@ src/
 ├── kvm/
 │   ├── types.ts          # KVM/BMC session types
 │   ├── bmc-session.ts    # BMC session establishment (cookie + CSRF extraction)
-│   └── screenshot.ts     # KVM screenshot: WebSocket → JPEG extraction → PNG
+│   ├── screenshot.ts     # KVM screenshot: IVTP WebSocket → AST2500 decode → PNG
+│   ├── optimize.ts       # LLM vision optimization (2x upscale + brightness boost)
+│   └── vendor/           # Vendored AST2500 decoder from AMI firmware
 ├── vnc/
 │   ├── rfb-client.ts     # VNC/RFB protocol client over WebSocket
 │   ├── encodings.ts      # RFB framebuffer encoding decoders (Raw, CopyRect)
