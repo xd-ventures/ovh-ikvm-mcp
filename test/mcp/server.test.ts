@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
+import { PNG } from "pngjs";
 import { createMcpServer } from "../../src/mcp/server.js";
 import type { Provider, Server } from "../../src/providers/types.js";
 
@@ -163,6 +164,42 @@ describe("MCP Server", () => {
 		// Verify it's valid base64
 		const decoded = Buffer.from(content[0].data ?? "", "base64");
 		expect(decoded[0]).toBe(0x89); // PNG magic
+	});
+
+	it("should return LLM-optimized screenshot by default (2x upscale)", async () => {
+		const result = await client.callTool({
+			name: "get_screenshot",
+			arguments: { serverId: "server-1" },
+		});
+		const content = result.content as Array<{
+			type: string;
+			data?: string;
+			mimeType?: string;
+		}>;
+
+		const decoded = Buffer.from(content[0].data ?? "", "base64");
+		const png = PNG.sync.read(decoded);
+		// Original TEST_PNG is 1x1 → optimized should be 2x2
+		expect(png.width).toBe(2);
+		expect(png.height).toBe(2);
+	});
+
+	it("should return raw screenshot when raw=true", async () => {
+		const result = await client.callTool({
+			name: "get_screenshot",
+			arguments: { serverId: "server-1", raw: true },
+		});
+		const content = result.content as Array<{
+			type: string;
+			data?: string;
+			mimeType?: string;
+		}>;
+
+		const decoded = Buffer.from(content[0].data ?? "", "base64");
+		const png = PNG.sync.read(decoded);
+		// Raw should preserve original 1x1 dimensions
+		expect(png.width).toBe(1);
+		expect(png.height).toBe(1);
 	});
 
 	it("should propagate provider errors as isError response", async () => {
