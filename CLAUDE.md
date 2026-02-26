@@ -28,21 +28,49 @@ Every feature is developed iteratively:
 3. **Refactor** if needed while keeping tests green
 4. **Repeat** for the next behavior
 
-### Git Workflow
+### Git Workflow — MANDATORY for every feature/fix
 
-- Branch from `main`: `feat/<name>`, `fix/<name>`, `test/<name>`
-- Conventional commits: `feat:`, `fix:`, `test:`, `chore:`, `docs:`
-- PRs reviewed via `gh` CLI before merging
-- CI must pass (typecheck + lint + test) before merge
+**Every new feature or fix MUST follow this flow. No exceptions.**
 
-### PR Review Process
+1. **Create a feature branch** from `main`:
+   ```bash
+   git checkout main && git pull
+   git checkout -b feat/<name>   # or fix/<name>, test/<name>
+   ```
 
-PRs are reviewed by a dedicated reviewer sub-agent acting as a staff TypeScript engineer. The reviewer checks:
-- Type safety and correct use of TypeScript
-- Test coverage and quality
-- Error handling
-- Code clarity and simplicity
-- No unnecessary abstractions
+2. **Develop on the branch** using BDD (write test → implement → refactor). Make conventional commits:
+   - `feat:`, `fix:`, `test:`, `chore:`, `docs:`
+
+3. **Verify before PR** — all three must pass:
+   ```bash
+   bun run typecheck && bun run lint && bun test
+   ```
+
+4. **Push and create a PR** via `gh`:
+   ```bash
+   git push -u origin feat/<name>
+   gh pr create --title "feat: ..." --body "..."
+   ```
+
+5. **PR review by Staff TypeScript agent** — spawn a `Plan` sub-agent (or equivalent reviewer agent) acting as a **staff TypeScript engineer**. The reviewer must check:
+   - Type safety and correct use of TypeScript
+   - Test coverage and quality
+   - Error handling
+   - Code clarity and simplicity
+   - No unnecessary abstractions
+   - The reviewer may request changes. Apply them, push, and re-request review.
+
+6. **Merge only after reviewer approval** and CI passing:
+   ```bash
+   gh pr merge <number> --squash
+   ```
+
+7. **Switch back to main**:
+   ```bash
+   git checkout main && git pull
+   ```
+
+**Do NOT skip steps.** Do not merge without review. Do not commit directly to `main`.
 
 ## Bun-Specific Best Practices
 
