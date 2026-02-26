@@ -122,7 +122,9 @@ The server starts on `http://localhost:3001/mcp` by default.
 
 ### Using with AI Coding Agents
 
-All agents connect to the same MCP server running at `http://localhost:3001/mcp`. Start it first:
+The server uses **Streamable HTTP** transport (not stdio), so all agents connect to it over HTTP. Start the server first, then configure your agent to point at it.
+
+**1. Start the server:**
 
 ```bash
 cd ovh-ikvm-mcp
@@ -133,29 +135,21 @@ export OVH_CONSUMER_KEY="your-consumer-key"
 bun start
 ```
 
-> **Tip:** The server can also be started by agents that support `command`-based MCP servers (see Claude Desktop section below). This launches and manages the server process automatically.
+You should see: `ikvm-mcp server listening on http://localhost:3001/mcp`
+
+**2. Configure your agent** (pick one):
 
 ---
 
 #### Claude Code
 
-Claude Code supports two configuration methods: remote URL (connect to a running server) or command (launch the server automatically).
-
-**Option A — Connect to a running server:**
+Register via the CLI:
 
 ```bash
 claude mcp add ikvm --transport http http://localhost:3001/mcp
 ```
 
-This adds the server to `~/.claude/settings.json`. Make sure the environment variables are set in the shell where `bun start` runs.
-
-**Option B — Auto-launch the server (recommended):**
-
-```bash
-claude mcp add ikvm --transport http -- bun run /path/to/ovh-ikvm-mcp/src/index.ts
-```
-
-Or add it directly to your project's `.mcp.json` so teammates get it automatically:
+Or add to your project's `.mcp.json` so teammates get it automatically:
 
 ```json
 {
@@ -174,6 +168,8 @@ Verify it's connected:
 claude mcp list
 ```
 
+Make sure the OVH environment variables are set in the terminal where you run `bun start`.
+
 ---
 
 #### Claude Desktop
@@ -182,32 +178,11 @@ Add to your Claude Desktop MCP config:
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-**Option A — Connect to a running server:**
-
 ```json
 {
   "mcpServers": {
     "ikvm": {
       "url": "http://localhost:3001/mcp"
-    }
-  }
-}
-```
-
-**Option B — Auto-launch the server (recommended):**
-
-```json
-{
-  "mcpServers": {
-    "ikvm": {
-      "command": "bun",
-      "args": ["run", "/path/to/ovh-ikvm-mcp/src/index.ts"],
-      "env": {
-        "OVH_ENDPOINT": "eu",
-        "OVH_APPLICATION_KEY": "your-app-key",
-        "OVH_APPLICATION_SECRET": "your-app-secret",
-        "OVH_CONSUMER_KEY": "your-consumer-key"
-      }
     }
   }
 }
@@ -219,34 +194,13 @@ After saving, restart Claude Desktop. The hammer icon in the input box confirms 
 
 #### Cursor
 
-Add to your Cursor MCP config at `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
-
-**Option A — Connect to a running server:**
+Add to `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
 
 ```json
 {
   "mcpServers": {
     "ikvm": {
       "url": "http://localhost:3001/mcp"
-    }
-  }
-}
-```
-
-**Option B — Auto-launch the server:**
-
-```json
-{
-  "mcpServers": {
-    "ikvm": {
-      "command": "bun",
-      "args": ["run", "/path/to/ovh-ikvm-mcp/src/index.ts"],
-      "env": {
-        "OVH_ENDPOINT": "eu",
-        "OVH_APPLICATION_KEY": "your-app-key",
-        "OVH_APPLICATION_SECRET": "your-app-secret",
-        "OVH_CONSUMER_KEY": "your-consumer-key"
-      }
     }
   }
 }
@@ -264,14 +218,7 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 {
   "mcpServers": {
     "ikvm": {
-      "command": "bun",
-      "args": ["run", "/path/to/ovh-ikvm-mcp/src/index.ts"],
-      "env": {
-        "OVH_ENDPOINT": "eu",
-        "OVH_APPLICATION_KEY": "your-app-key",
-        "OVH_APPLICATION_SECRET": "your-app-secret",
-        "OVH_CONSUMER_KEY": "your-consumer-key"
-      }
+      "serverUrl": "http://localhost:3001/mcp"
     }
   }
 }
