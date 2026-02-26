@@ -17,13 +17,17 @@ export class OvhApiClient {
 
 	constructor(config: OvhConfig) {
 		this.config = config;
-		const base = ENDPOINTS[config.endpoint];
-		if (!base) {
-			throw new Error(
-				`Unknown OVH endpoint: ${config.endpoint}. Valid: ${Object.keys(ENDPOINTS).join(", ")}`,
-			);
+		if (config.baseUrl) {
+			this.baseUrl = config.baseUrl;
+		} else {
+			const base = ENDPOINTS[config.endpoint];
+			if (!base) {
+				throw new Error(
+					`Unknown OVH endpoint: ${config.endpoint}. Valid: ${Object.keys(ENDPOINTS).join(", ")}`,
+				);
+			}
+			this.baseUrl = base;
 		}
-		this.baseUrl = base;
 	}
 
 	/** Sync local time with OVH server time (call once before making requests). */

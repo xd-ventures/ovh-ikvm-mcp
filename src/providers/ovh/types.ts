@@ -8,6 +8,8 @@ export interface OvhConfig {
 	readonly applicationKey: string;
 	readonly applicationSecret: string;
 	readonly consumerKey: string;
+	/** Override base URL (for testing) */
+	readonly baseUrl?: string;
 }
 
 /** OVH dedicated server details (subset of fields we need) */

@@ -7,16 +7,31 @@ import type { Provider, Server } from "../types.js";
 import { OvhApiClient } from "./api.js";
 import type { OvhConfig, OvhDedicatedServer, OvhIpmiAccess, OvhTask } from "./types.js";
 
-const POLL_INTERVAL = 3_000;
-const POLL_MAX_ATTEMPTS = 40; // 40 * 3s = 2 minutes max
+const DEFAULT_POLL_INTERVAL = 3_000;
+const DEFAULT_POLL_MAX_ATTEMPTS = 40; // 40 * 3s = 2 minutes max
+
+export interface OvhProviderOptions {
+	/** Override poll interval in ms (for testing) */
+	pollInterval?: number;
+	/** Override max poll attempts (for testing) */
+	pollMaxAttempts?: number;
+	/** Override public IP detection */
+	publicIp?: string;
+}
 
 export class OvhProvider implements Provider {
 	readonly name = "ovh";
 	private readonly api: OvhApiClient;
+	private readonly pollInterval: number;
+	private readonly pollMaxAttempts: number;
+	private readonly publicIp?: string;
 	private initialized = false;
 
-	constructor(config: OvhConfig) {
+	constructor(config: OvhConfig, options?: OvhProviderOptions) {
 		this.api = new OvhApiClient(config);
+		this.pollInterval = options?.pollInterval ?? DEFAULT_POLL_INTERVAL;
+		this.pollMaxAttempts = options?.pollMaxAttempts ?? DEFAULT_POLL_MAX_ATTEMPTS;
+		this.publicIp = options?.publicIp;
 	}
 
 	private async ensureInit(): Promise<void> {
@@ -50,7 +65,7 @@ export class OvhProvider implements Provider {
 		await this.ensureInit();
 
 		// 1. Request iKVM HTML5 access
-		const myIp = await this.getPublicIp();
+		const myIp = this.publicIp ?? (await this.getPublicIp());
 		const task = await this.api.post<OvhTask>(
 			`/dedicated/server/${serverId}/features/ipmi/access`,
 			{
@@ -93,16 +108,17 @@ export class OvhProvider implements Provider {
 		}
 
 		// Try to find a host/port config and construct the WS URL
-		const hostMatch = html.match(/['"]host['"]\s*:\s*['"]([^'"]+)['"]/);
-		const portMatch = html.match(/['"]port['"]\s*:\s*['"]?(\d+)['"]?/);
-		const pathMatch = html.match(/['"]path['"]\s*:\s*['"]([^'"]+)['"]/);
+		const hostMatch = html.match(/['"]?host['"]?\s*[:=]\s*['"]([^'"]+)['"]/);
+		const portMatch = html.match(/['"]?port['"]?\s*[:=]\s*['"]?(\d+)['"]?/);
+		const pathMatch = html.match(/['"]?path['"]?\s*[:=]\s*['"]([^'"]+)['"]/);
 
 		if (hostMatch) {
 			const host = hostMatch[1];
 			const port = portMatch ? portMatch[1] : "443";
-			const path = pathMatch ? pathMatch[1] : "websockify";
+			const path = pathMatch ? pathMatch[1] : "";
 			const proto = port === "443" ? "wss" : "ws";
-			return `${proto}://${host}:${port}/${path}`;
+			const pathPart = path ? `/${path}` : "";
+			return `${proto}://${host}:${port}${pathPart}`;
 		}
 
 		// Fallback: construct from the viewer URL's origin
@@ -112,7 +128,7 @@ export class OvhProvider implements Provider {
 
 	/** Wait for an OVH async task to complete. */
 	private async waitForTask(serverId: string, taskId: number): Promise<void> {
-		for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
+		for (let i = 0; i < this.pollMaxAttempts; i++) {
 			const task = await this.api.get<OvhTask>(`/dedicated/server/${serverId}/task/${taskId}`);
 
 			if (task.status === "done") return;
@@ -124,11 +140,11 @@ export class OvhProvider implements Provider {
 				throw new Error(`OVH task ${taskId} failed: ${task.status} — ${task.comment}`);
 			}
 
-			await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+			await new Promise((resolve) => setTimeout(resolve, this.pollInterval));
 		}
 
 		throw new Error(
-			`OVH task ${taskId} timed out after ${(POLL_MAX_ATTEMPTS * POLL_INTERVAL) / 1000}s`,
+			`OVH task ${taskId} timed out after ${(this.pollMaxAttempts * this.pollInterval) / 1000}s`,
 		);
 	}
 
