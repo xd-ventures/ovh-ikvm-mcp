@@ -16,12 +16,14 @@
 	"license": "Apache-2.0",
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.12.1",
+		"jpeg-js": "^0.4.4",
 		"pngjs": "^7.0.0",
 		"zod": "^3.24.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",
 		"@types/bun": "^1.2.0",
+		"@types/jpeg-js": "^0.3.7",
 		"@types/pngjs": "^6.0.5",
 		"typescript": "^5.7.0"
 	}

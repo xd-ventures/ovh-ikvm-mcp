@@ -6,8 +6,11 @@ import type { OvhConfig } from "./types.js";
 
 const ENDPOINTS: Record<string, string> = {
 	eu: "https://eu.api.ovh.com/1.0",
+	"ovh-eu": "https://eu.api.ovh.com/1.0",
 	ca: "https://ca.api.ovh.com/1.0",
+	"ovh-ca": "https://ca.api.ovh.com/1.0",
 	us: "https://api.us.ovhcloud.com/1.0",
+	"ovh-us": "https://api.us.ovhcloud.com/1.0",
 };
 
 export class OvhApiClient {

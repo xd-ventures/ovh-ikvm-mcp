@@ -11,14 +11,16 @@ This MCP (Model Context Protocol) server exposes bare metal server iKVM consoles
 ```
 LLM ──MCP──► ikvm-mcp server ──OVH API──► get viewer URL
                     │
-                    └──VNC/RFB over WebSocket──► capture framebuffer ──► PNG screenshot
+                    ├──KVM WebSocket──► extract JPEG frame ──► PNG screenshot (AMI/ASRockRack BMC)
+                    └──VNC/RFB over WebSocket──► capture framebuffer ──► PNG screenshot (standard VNC)
 ```
 
 1. The MCP server authenticates with the cloud provider API (OVH)
 2. Requests an iKVM/IPMI HTML5 console session
-3. Connects directly to the VNC/RFB WebSocket endpoint (no headless browser needed)
-4. Captures the framebuffer and encodes it as PNG
-5. Returns the image to the LLM via MCP
+3. Establishes a BMC session (extracts session cookie and CSRF token from the viewer page)
+4. Connects to the KVM WebSocket, receives JPEG video frames
+5. Extracts the first complete JPEG frame and converts it to PNG
+6. Returns the image to the LLM via MCP
 
 ### Supported providers
 
@@ -50,13 +52,14 @@ List all available bare metal servers with iKVM/IPMI access.
 
 ### `get_screenshot`
 
-Capture a screenshot of a server's iKVM/IPMI console screen. Returns a PNG image of what is currently displayed on the server's physical monitor output.
+Capture a screenshot of a server's iKVM/IPMI console screen. Returns a PNG image optimized for LLM vision (2x upscale + brightness boost). Set `raw=true` to get the original unprocessed image.
 
 **Parameters:**
 
-| Name | Type | Description |
-|------|------|-------------|
-| `serverId` | string | Server identifier (e.g., `ns1234567.ip-1-2-3.eu`) |
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `serverId` | string | *(required)* | Server identifier (e.g., `ns1234567.ip-1-2-3.eu`) |
+| `raw` | boolean | `false` | Return the raw screenshot without LLM optimization |
 
 **Returns:** PNG image content block (base64-encoded)
 
@@ -184,6 +187,7 @@ bun run format
 
 Tests use Bun's built-in test runner with:
 
+- **Mock BMC server** — simulates ASRockRack/AMI BMC with session auth and JPEG frame WebSocket
 - **Test VNC server** — minimal RFB server serving a known image for VNC client tests
 - **Mock OVH API** — simulates OVH REST API endpoints with auth validation
 - **In-memory MCP transport** — tests MCP tool invocation without HTTP overhead
@@ -199,6 +203,12 @@ bun run typecheck && bun run lint && bun test
 ```
 src/
 ├── index.ts              # Entry point — Bun HTTP server with MCP transport
+├── kvm/
+│   ├── types.ts          # KVM/BMC session types
+│   ├── bmc-session.ts    # BMC session establishment (cookie + CSRF extraction)
+│   ├── screenshot.ts     # KVM screenshot: IVTP WebSocket → AST2500 decode → PNG
+│   ├── optimize.ts       # LLM vision optimization (2x upscale + brightness boost)
+│   └── vendor/           # Vendored AST2500 decoder from AMI firmware
 ├── vnc/
 │   ├── rfb-client.ts     # VNC/RFB protocol client over WebSocket
 │   ├── encodings.ts      # RFB framebuffer encoding decoders (Raw, CopyRect)
@@ -226,9 +236,18 @@ interface Provider {
 }
 ```
 
+### AMI KVM client
+
+OVH servers use ASRockRack/AMI BMC firmware with a proprietary WebSocket KVM protocol at `wss://<host>/kvm`. The KVM client:
+
+1. Fetches the viewer redirect page and extracts the `QSESSIONID` cookie and `garc` CSRF token
+2. Connects to the KVM WebSocket endpoint
+3. Scans incoming binary messages for JPEG SOI (`0xFFD8`) / EOI (`0xFFD9`) markers
+4. Extracts the first complete JPEG frame and converts it to PNG
+
 ### VNC/RFB client
 
-The VNC client connects directly to the WebSocket endpoint exposed by the iKVM viewer, performing the RFB protocol handshake (version negotiation, security, framebuffer request) without needing a headless browser. This makes it lightweight and reliable.
+The VNC client connects directly to the WebSocket endpoint exposed by iKVM viewers that use standard VNC, performing the RFB protocol handshake (version negotiation, security, framebuffer request) without needing a headless browser.
 
 Supported RFB features:
 - Protocol versions: 3.3, 3.7, 3.8

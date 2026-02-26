@@ -4,6 +4,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { optimizeForLlm } from "../kvm/optimize.js";
 import type { Provider } from "../providers/types.js";
 
 export function createMcpServer(provider: Provider): McpServer {
@@ -31,17 +32,23 @@ export function createMcpServer(provider: Provider): McpServer {
 
 	server.tool(
 		"get_screenshot",
-		"Capture a screenshot of a server's iKVM/IPMI console screen. Returns a PNG image of what is currently displayed on the server's physical monitor output.",
+		"Capture a screenshot of a server's iKVM/IPMI console screen. Returns a PNG image optimized for LLM vision (2x upscale + brightness boost). Set raw=true to get the original unprocessed image.",
 		{
 			serverId: z.string().describe("Server identifier (e.g., 'ns1234567.ip-1-2-3.eu')"),
+			raw: z
+				.boolean()
+				.optional()
+				.default(false)
+				.describe("Return the raw screenshot without LLM optimization"),
 		},
-		async ({ serverId }) => {
+		async ({ serverId, raw }) => {
 			const png = await provider.getScreenshot(serverId);
+			const outputPng = raw ? png : optimizeForLlm(png);
 			return {
 				content: [
 					{
 						type: "image",
-						data: png.toString("base64"),
+						data: outputPng.toString("base64"),
 						mimeType: "image/png",
 					},
 				],

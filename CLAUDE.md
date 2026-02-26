@@ -83,16 +83,25 @@ describe("feature", () => {
 ## Architecture Principles
 
 - **Provider pattern**: Each bare metal provider implements a `Provider` interface
-- **Layered design**: VNC/RFB client is independent of any provider
+- **AMI KVM for OVH**: OVH BMCs use ASRockRack/AMI firmware with a proprietary IVTP WebSocket protocol (`wss://<host>/kvm`), not standard VNC
+- **LLM-optimized output**: `get_screenshot` returns 2x upscaled + 3x brightness-boosted PNGs by default (raw BMC output is too small/dark for LLM vision); `raw=true` gives the original
 - **MCP tools return image content**: Screenshots are returned as base64 PNG in MCP image blocks
-- **No headless browser**: Direct VNC/RFB WebSocket connection for screenshot capture
+- **No headless browser**: Direct WebSocket connection for screenshot capture
 - **Read-only MVP**: Only screenshot capture, no keyboard/mouse input (yet)
 
 ## Key Files
 
-- `src/vnc/rfb-client.ts` — Core RFB protocol client
-- `src/vnc/screenshot.ts` — High-level screenshot capture function
+- `src/kvm/screenshot.ts` — AMI KVM screenshot: IVTP WebSocket → AST2500 decode → PNG
+- `src/kvm/bmc-session.ts` — BMC session establishment (cookie + CSRF + KVM token)
+- `src/kvm/optimize.ts` — LLM vision optimization (upscale + brightness boost)
+- `src/kvm/vendor/decode_worker.js` — Vendored AST2500 video decoder from AMI firmware (no types)
+- `src/vnc/rfb-client.ts` — VNC/RFB protocol client (for future standard VNC providers)
 - `src/providers/types.ts` — Provider interface definition
 - `src/providers/ovh/api.ts` — OVH API client with request signing
 - `src/mcp/server.ts` — MCP server and tool registration
 - `src/index.ts` — Entry point
+
+## Lessons Learned
+
+- **LLM vision needs post-processing**: Raw BMC screenshots (800x600, dark) render as tiny thumbnails in Claude's vision. A 2x nearest-neighbor upscale + 3x brightness boost makes text perfectly readable. Always optimize by default; offer `raw` flag for debugging.
+- **AST2500 decoder is non-strict JS**: The vendored `decode_worker.js` uses `delete` on variables and other non-strict patterns. It must be loaded via `new Function()`, not `import`. No TypeScript types exist for it.
