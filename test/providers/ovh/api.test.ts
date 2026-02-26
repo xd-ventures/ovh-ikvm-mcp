@@ -115,9 +115,7 @@ describe("OvhApiClient integration", () => {
 	});
 
 	it("should sync time with the server", async () => {
-		await client.syncTime();
-		// Should not throw — just verifies the time sync endpoint works
-		expect(true).toBe(true);
+		await expect(client.syncTime()).resolves.toBeUndefined();
 	});
 
 	it("should send correct auth headers on GET", async () => {

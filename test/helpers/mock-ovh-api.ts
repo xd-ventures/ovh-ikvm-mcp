@@ -78,6 +78,11 @@ export class MockOvhApi {
 		return this.server?.port ?? 0;
 	}
 
+	/** Clear recorded requests (useful for test isolation between tests). */
+	clearRequests(): void {
+		this.requests.length = 0;
+	}
+
 	/** Complete all pending tasks (simulates async IPMI access becoming ready) */
 	completeTasks(): void {
 		for (const task of this.tasks.values()) {
@@ -125,6 +130,8 @@ export class MockOvhApi {
 				const taskId = this.taskCounter;
 				const status = this.options.autoCompleteTasks ? "done" : "doing";
 				this.tasks.set(taskId, { taskId, status, serverId });
+				// The real OVH API always returns "doing" on POST — the task status is
+				// obtained by polling GET /task/{id}. We mirror that behaviour here.
 				return Response.json({
 					taskId,
 					function: "ipmiAccessSet",

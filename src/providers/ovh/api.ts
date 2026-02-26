@@ -36,7 +36,7 @@ export class OvhApiClient {
 		if (!res.ok) {
 			throw new Error(`Failed to sync time: ${res.status} ${res.statusText}`);
 		}
-		const serverTime = await res.json();
+		const serverTime = (await res.json()) as number;
 		this.timeDelta = serverTime - Math.floor(Date.now() / 1000);
 	}
 
