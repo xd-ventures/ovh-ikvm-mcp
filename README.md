@@ -120,31 +120,69 @@ bun start
 
 The server starts on `http://localhost:3001/mcp` by default.
 
-### MCP Client Configuration
+### Using with AI Coding Agents
 
-#### Claude Desktop
+All agents connect to the same MCP server running at `http://localhost:3001/mcp`. Start it first:
 
-Add to your Claude Desktop MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+```bash
+cd ovh-ikvm-mcp
+export OVH_ENDPOINT="eu"
+export OVH_APPLICATION_KEY="your-app-key"
+export OVH_APPLICATION_SECRET="your-app-secret"
+export OVH_CONSUMER_KEY="your-consumer-key"
+bun start
+```
+
+> **Tip:** The server can also be started by agents that support `command`-based MCP servers (see Claude Desktop section below). This launches and manages the server process automatically.
+
+---
+
+#### Claude Code
+
+Claude Code supports two configuration methods: remote URL (connect to a running server) or command (launch the server automatically).
+
+**Option A — Connect to a running server:**
+
+```bash
+claude mcp add ikvm --transport http http://localhost:3001/mcp
+```
+
+This adds the server to `~/.claude/settings.json`. Make sure the environment variables are set in the shell where `bun start` runs.
+
+**Option B — Auto-launch the server (recommended):**
+
+```bash
+claude mcp add ikvm --transport http -- bun run /path/to/ovh-ikvm-mcp/src/index.ts
+```
+
+Or add it directly to your project's `.mcp.json` so teammates get it automatically:
 
 ```json
 {
   "mcpServers": {
     "ikvm": {
-      "url": "http://localhost:3001/mcp",
-      "env": {
-        "OVH_ENDPOINT": "eu",
-        "OVH_APPLICATION_KEY": "your-app-key",
-        "OVH_APPLICATION_SECRET": "your-app-secret",
-        "OVH_CONSUMER_KEY": "your-consumer-key"
-      }
+      "type": "http",
+      "url": "http://localhost:3001/mcp"
     }
   }
 }
 ```
 
-#### Claude Code
+Verify it's connected:
 
-Add to your Claude Code MCP settings:
+```bash
+claude mcp list
+```
+
+---
+
+#### Claude Desktop
+
+Add to your Claude Desktop MCP config:
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Option A — Connect to a running server:**
 
 ```json
 {
@@ -156,7 +194,124 @@ Add to your Claude Code MCP settings:
 }
 ```
 
-Make sure the environment variables are set in the shell where Claude Code runs.
+**Option B — Auto-launch the server (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "ikvm": {
+      "command": "bun",
+      "args": ["run", "/path/to/ovh-ikvm-mcp/src/index.ts"],
+      "env": {
+        "OVH_ENDPOINT": "eu",
+        "OVH_APPLICATION_KEY": "your-app-key",
+        "OVH_APPLICATION_SECRET": "your-app-secret",
+        "OVH_CONSUMER_KEY": "your-consumer-key"
+      }
+    }
+  }
+}
+```
+
+After saving, restart Claude Desktop. The hammer icon in the input box confirms the MCP tools are loaded.
+
+---
+
+#### Cursor
+
+Add to your Cursor MCP config at `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
+
+**Option A — Connect to a running server:**
+
+```json
+{
+  "mcpServers": {
+    "ikvm": {
+      "url": "http://localhost:3001/mcp"
+    }
+  }
+}
+```
+
+**Option B — Auto-launch the server:**
+
+```json
+{
+  "mcpServers": {
+    "ikvm": {
+      "command": "bun",
+      "args": ["run", "/path/to/ovh-ikvm-mcp/src/index.ts"],
+      "env": {
+        "OVH_ENDPOINT": "eu",
+        "OVH_APPLICATION_KEY": "your-app-key",
+        "OVH_APPLICATION_SECRET": "your-app-secret",
+        "OVH_CONSUMER_KEY": "your-consumer-key"
+      }
+    }
+  }
+}
+```
+
+After saving, open Cursor Settings > MCP and verify the `ikvm` server shows a green indicator.
+
+---
+
+#### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ikvm": {
+      "command": "bun",
+      "args": ["run", "/path/to/ovh-ikvm-mcp/src/index.ts"],
+      "env": {
+        "OVH_ENDPOINT": "eu",
+        "OVH_APPLICATION_KEY": "your-app-key",
+        "OVH_APPLICATION_SECRET": "your-app-secret",
+        "OVH_CONSUMER_KEY": "your-consumer-key"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Example Prompts
+
+Once connected, you can use these prompts with any agent:
+
+**List servers and take a screenshot:**
+
+```
+List my bare metal servers using the ikvm MCP, then take a screenshot
+of the first server's console. Describe what you see on the screen.
+```
+
+**Debug a server that won't boot:**
+
+```
+My server ns1234567.ip-1-2-3.eu is stuck during boot. Take a screenshot
+of its console and diagnose the issue. If you see a kernel panic or
+GRUB error, suggest how to fix it.
+```
+
+**Monitor server state:**
+
+```
+Take a screenshot of ns1234567.ip-1-2-3.eu console. Is the server
+at a login prompt, showing an error, or still booting? If it's at
+a login prompt, the OS reinstall was successful.
+```
+
+**Compare raw vs optimized output:**
+
+```
+Take two screenshots of ns1234567.ip-1-2-3.eu — one default (optimized)
+and one with raw=true. Compare the readability.
+```
 
 ## Development
 
