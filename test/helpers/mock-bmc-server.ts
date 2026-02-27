@@ -5,7 +5,8 @@
  * 1. HTTP redirect page with QSESSIONID cookie and garc CSRF token
  * 2. /viewer.html endpoint (session activation)
  * 3. /api/kvm/token endpoint (returns KVM auth token)
- * 4. WebSocket at /kvm with IVTP protocol handshake and AST2500 video frame delivery
+ * 4. /libs/kvm/ast/decode_worker.js endpoint (AST2500 decoder JS)
+ * 5. WebSocket at /kvm with IVTP protocol handshake and AST2500 video frame delivery
  */
 
 import type { Server as BunServerType, ServerWebSocket } from "bun";
@@ -119,6 +120,10 @@ export class MockBmcServer {
 			return this.serveKvmToken(req);
 		}
 
+		if (url.pathname === "/libs/kvm/ast/decode_worker.js") {
+			return this.serveDecoderJs(req);
+		}
+
 		return new Response("Not Found", { status: 404 });
 	}
 
@@ -156,6 +161,17 @@ window.location.href = "/viewer.html";
 			client_ip: this.options.clientIp ?? "127.0.0.1",
 			token: this.options.kvmToken ?? "mock-kvm-token-xyz",
 			session: "mock-session-id",
+		});
+	}
+
+	private serveDecoderJs(req: Request): Response {
+		const cookieHeader = req.headers.get("cookie") ?? "";
+		const expectedCookie = this.options.sessionCookie ?? "test-session-id-12345";
+		if (!cookieHeader.includes(`QSESSIONID=${expectedCookie}`)) {
+			return new Response("Unauthorized", { status: 401 });
+		}
+		return new Response(MOCK_DECODER_JS, {
+			headers: { "Content-Type": "application/javascript" },
 		});
 	}
 
@@ -294,3 +310,29 @@ window.location.href = "/viewer.html";
 		return packet;
 	}
 }
+
+/**
+ * Minimal mock decoder JS that mimics the AMI AST2500 decoder interface.
+ *
+ * Uses `delete` on a variable to test non-strict mode compatibility
+ * (the real decoder does this). The decode() method is a no-op that
+ * produces a black image — sufficient for testing the full pipeline.
+ */
+const MOCK_DECODER_JS = `
+var temp = 1;
+delete temp;
+
+var Decoder = function() {
+	this.imageBuffer = null;
+	this.m_decodeBuf = null;
+};
+
+Decoder.prototype.setImageBuffer = function(imageBuffer) {
+	this.imageBuffer = imageBuffer;
+	this.m_decodeBuf = imageBuffer.data;
+};
+
+Decoder.prototype.decode = function(header, buffer) {
+	// No-op: produces a black image (all zeros in the image buffer)
+};
+`;

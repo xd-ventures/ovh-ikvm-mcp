@@ -13,6 +13,7 @@
 
 import { PNG } from "pngjs";
 import { establishBmcSession } from "./bmc-session.js";
+import { createImageData, fetchDecoder } from "./decoder-fetcher.js";
 import type { BmcSession, KvmScreenshotOptions, KvmScreenshotResult } from "./types.js";
 
 const DEFAULT_CONNECT_TIMEOUT = 10_000;
@@ -59,8 +60,8 @@ export async function captureKvmScreenshot(
 	const wsUrl = `${wsProto}://${session.host}/kvm`;
 	const frame = await captureVideoFrame(wsUrl, session, connectTimeout, frameTimeout);
 
-	// Step 3: Decode AST2500 tiles and convert to PNG
-	return decodeFrameToPng(frame);
+	// Step 3: Fetch decoder from BMC and decode AST2500 tiles to PNG
+	return decodeFrameToPng(frame, session);
 }
 
 /** Video frame data: header info + compressed tile data chunks. */
@@ -320,45 +321,11 @@ async function captureVideoFrame(
 	});
 }
 
-/** Load and initialize the AST2500 decoder (from vendored BMC firmware). */
-let decoderFactory: (() => unknown) | null = null;
-
-// biome-ignore lint/suspicious/noExplicitAny: vendored decoder has no type definitions
-async function getDecoder(): Promise<any> {
-	if (!decoderFactory) {
-		const decoderPath = new URL("./vendor/decode_worker.js", import.meta.url).pathname;
-		const decoderSrc = await Bun.file(decoderPath).text();
-
-		const helperCode = `
-			function COLOR_CACHE() { this.Index = new Uint8Array(4); this.Color = new Uint32Array(4); }
-			function HuffmanTable() { this.m_success = 0; this.m_length = 0; this.m_code = 0; this.m_table = []; this.m_hufVal = 0; }
-			function RC4State() { this.x = 0; this.y = 0; this.m = new Uint8Array(256); }
-		`;
-
-		// Use Function constructor to avoid strict mode (decoder uses `delete` on variables)
-		decoderFactory = new Function(
-			"ImageData",
-			`${helperCode}\n${decoderSrc}\nreturn function() { return new Decoder(); };`,
-		)(ImageDataShim) as () => unknown;
-	}
-	const factory = decoderFactory;
-	return factory();
-}
-
-/** Minimal ImageData shim for the AST2500 decoder. */
-class ImageDataShim {
-	data: Uint8ClampedArray;
-	width: number;
-	height: number;
-	constructor(width: number, height: number) {
-		this.width = width;
-		this.height = height;
-		this.data = new Uint8ClampedArray(width * height * 4);
-	}
-}
-
-/** Decode AST2500 compressed video frame to PNG. */
-async function decodeFrameToPng(frame: VideoFrame): Promise<KvmScreenshotResult> {
+/** Decode AST2500 compressed video frame to PNG using runtime-fetched decoder. */
+async function decodeFrameToPng(
+	frame: VideoFrame,
+	session: BmcSession,
+): Promise<KvmScreenshotResult> {
 	const { width, height, headerBytes, compressedChunks, compressSize } = frame;
 
 	// Parse video engine info from header
@@ -406,9 +373,10 @@ async function decodeFrameToPng(frame: VideoFrame): Promise<KvmScreenshotResult>
 	new Uint8Array(alignedBuf).set(compressedData);
 	const recvBuffer = new Int32Array(alignedBuf);
 
-	// Decode
-	const decoder = await getDecoder();
-	const imageBuffer = new ImageDataShim(width, height);
+	// Decode using runtime-fetched decoder from BMC
+	const decoderFactory = await fetchDecoder(session.host, session.sessionCookie);
+	const decoder = decoderFactory();
+	const imageBuffer = createImageData(width, height);
 	decoder.setImageBuffer(imageBuffer);
 	decoder.decode(videoinfo, recvBuffer);
 

@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { clearDecoderCache } from "../../src/kvm/decoder-fetcher.js";
 import { captureKvmScreenshot } from "../../src/kvm/screenshot.js";
 import { MockBmcServer } from "../helpers/mock-bmc-server.js";
 
@@ -18,6 +19,10 @@ describe("captureKvmScreenshot", () => {
 		});
 		const baseUrl = bmc.start();
 		viewerUrl = `${baseUrl}/viewer`;
+	});
+
+	afterEach(() => {
+		clearDecoderCache();
 	});
 
 	afterAll(() => {

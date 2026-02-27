@@ -129,9 +129,7 @@ describe("fetchDecoder error handling", () => {
 		});
 
 		const host = `localhost:${server.port}`;
-		await expect(fetchDecoder(host, "cookie")).rejects.toThrow(
-			/Failed to fetch decoder.*500/,
-		);
+		await expect(fetchDecoder(host, "cookie")).rejects.toThrow(/Failed to fetch decoder.*500/);
 
 		server.stop(true);
 	});
@@ -147,9 +145,7 @@ describe("fetchDecoder error handling", () => {
 		});
 
 		const host = `localhost:${server.port}`;
-		await expect(fetchDecoder(host, "cookie")).rejects.toThrow(
-			/Failed to initialize decoder/,
-		);
+		await expect(fetchDecoder(host, "cookie")).rejects.toThrow(/Failed to initialize decoder/);
 
 		server.stop(true);
 	});
@@ -165,9 +161,7 @@ describe("fetchDecoder error handling", () => {
 		});
 
 		const host = `localhost:${server.port}`;
-		await expect(fetchDecoder(host, "cookie")).rejects.toThrow(
-			/Failed to initialize decoder/,
-		);
+		await expect(fetchDecoder(host, "cookie")).rejects.toThrow(/Failed to initialize decoder/);
 
 		server.stop(true);
 	});
