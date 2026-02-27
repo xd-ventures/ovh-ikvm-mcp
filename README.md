@@ -1,5 +1,8 @@
 # ovh-ikvm-mcp
 
+[![CI](https://github.com/xd-ventures/ovh-ikvm-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/xd-ventures/ovh-ikvm-mcp/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 MCP server that gives LLMs visual access to bare metal server consoles via iKVM/IPMI. Capture screenshots of remote server screens for AI-powered debugging of bare metal deployments.
 
 ## Overview
@@ -310,7 +313,7 @@ src/
 │   ├── bmc-session.ts    # BMC session establishment (cookie + CSRF extraction)
 │   ├── screenshot.ts     # KVM screenshot: IVTP WebSocket → AST2500 decode → PNG
 │   ├── optimize.ts       # LLM vision optimization (2x upscale + brightness boost)
-│   └── vendor/           # Vendored AST2500 decoder from AMI firmware
+│   └── decoder-fetcher.ts # Runtime fetcher for AST2500 decoder from BMC
 ├── vnc/
 │   ├── rfb-client.ts     # VNC/RFB protocol client over WebSocket
 │   ├── encodings.ts      # RFB framebuffer encoding decoders (Raw, CopyRect)
@@ -355,6 +358,20 @@ Supported RFB features:
 - Protocol versions: 3.3, 3.7, 3.8
 - Security: None, VNC Authentication (DES challenge-response)
 - Encodings: Raw, CopyRect
+
+## Acknowledgments
+
+This project connects to BMC firmware by [American Megatrends Inc. (AMI)](https://www.ami.com/).
+The AST2500 video decoder is fetched at runtime from the BMC's web interface
+and is not distributed with this project. See [NOTICE](NOTICE) for details.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, workflow, and guidelines.
+
+This project follows the [Contributor Covenant 3.0](CODE_OF_CONDUCT.md) code of conduct.
+
+To report security vulnerabilities, see [SECURITY.md](SECURITY.md).
 
 ## License
 
