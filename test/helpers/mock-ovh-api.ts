@@ -176,7 +176,7 @@ export class MockOvhApi {
 		// GET /dedicated/server/{name}/task/{taskId}
 		const taskMatch = path.match(/^\/dedicated\/server\/[^/]+\/task\/(\d+)$/);
 		if (method === "GET" && taskMatch) {
-			const taskId = Number.parseInt(taskMatch[1]);
+			const taskId = Number.parseInt(taskMatch[1], 10);
 			const task = this.tasks.get(taskId);
 			if (!task) {
 				return Response.json({ message: "Task not found" }, { status: 404 });
