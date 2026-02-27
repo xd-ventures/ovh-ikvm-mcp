@@ -1,6 +1,7 @@
 # ovh-ikvm-mcp
 
 [![CI](https://github.com/xd-ventures/ovh-ikvm-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/xd-ventures/ovh-ikvm-mcp/actions/workflows/ci.yml)
+[![Docker](https://github.com/xd-ventures/ovh-ikvm-mcp/actions/workflows/docker.yml/badge.svg)](https://github.com/xd-ventures/ovh-ikvm-mcp/actions/workflows/docker.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 MCP server that gives LLMs visual access to bare metal server consoles via iKVM/IPMI. Capture screenshots of remote server screens for AI-powered debugging of bare metal deployments.
@@ -122,6 +123,29 @@ bun start
 ```
 
 The server starts on `http://localhost:3001/mcp` by default.
+
+### Docker
+
+A pre-built image is published to GitHub Container Registry on every push to `main`.
+
+```bash
+docker run --rm \
+  -e OVH_ENDPOINT=eu \
+  -e OVH_APPLICATION_KEY=your-app-key \
+  -e OVH_APPLICATION_SECRET=your-app-secret \
+  -e OVH_CONSUMER_KEY=your-consumer-key \
+  -p 3001:3001 \
+  ghcr.io/xd-ventures/ovh-ikvm-mcp:latest
+```
+
+The container runs as a non-root user and includes a health check on `/health`.
+
+You can also build the image locally:
+
+```bash
+docker build -t ovh-ikvm-mcp .
+docker run --rm -e OVH_ENDPOINT=eu -e OVH_APPLICATION_KEY=... -e OVH_APPLICATION_SECRET=... -e OVH_CONSUMER_KEY=... -p 3001:3001 ovh-ikvm-mcp
+```
 
 ### Using with AI Coding Agents
 

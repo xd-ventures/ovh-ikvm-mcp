@@ -13,8 +13,8 @@ LABEL org.opencontainers.image.title="ovh-ikvm-mcp" \
       org.opencontainers.image.source="https://github.com/xd-ventures/ovh-ikvm-mcp" \
       org.opencontainers.image.licenses="Apache-2.0"
 
-RUN addgroup --system --gid 1001 app && \
-    adduser --system --uid 1001 --ingroup app app
+RUN groupadd --system --gid 1001 app && \
+    useradd --system --uid 1001 --gid app --no-create-home app
 
 COPY --chown=app:app --from=deps /app/node_modules ./node_modules
 COPY --chown=app:app package.json ./
