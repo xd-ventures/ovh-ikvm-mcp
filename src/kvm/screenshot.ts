@@ -177,6 +177,16 @@ async function captureVideoFrame(
 		let receivedCompressedBytes = 0;
 		let isFirstPacket = true;
 
+		// biome-ignore lint: Bun's WebSocket supports headers option (non-standard)
+		const ws = new (WebSocket as any)(wsUrl, {
+			headers: {
+				Cookie: `QSESSIONID=${session.sessionCookie}`,
+				Origin: `https://${session.host}`,
+				"Sec-WebSocket-Protocol": "binary, base64",
+			},
+		});
+		ws.binaryType = "arraybuffer";
+
 		const finish = (err: Error | null, frame?: VideoFrame): void => {
 			if (settled) return;
 			settled = true;
@@ -199,16 +209,6 @@ async function captureVideoFrame(
 		const frameTimer = setTimeout(() => {
 			finish(new Error(`No complete video frame received within ${frameTimeout}ms`));
 		}, frameTimeout);
-
-		// biome-ignore lint: Bun's WebSocket supports headers option (non-standard)
-		const ws = new (WebSocket as any)(wsUrl, {
-			headers: {
-				Cookie: `QSESSIONID=${session.sessionCookie}`,
-				Origin: `https://${session.host}`,
-				"Sec-WebSocket-Protocol": "binary, base64",
-			},
-		});
-		ws.binaryType = "arraybuffer";
 
 		ws.onopen = (): void => {
 			connected = true;
