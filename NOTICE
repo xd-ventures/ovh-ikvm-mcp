@@ -1,0 +1,7 @@
+ovh-ikvm-mcp
+Copyright 2025 ovh-ikvm-mcp contributors
+
+This product connects to BMC (Baseboard Management Controller) firmware
+by American Megatrends Inc. (https://www.ami.com/) and downloads the
+AST2500 video decoder at runtime from the BMC's web interface. The
+decoder is not distributed with this project.
