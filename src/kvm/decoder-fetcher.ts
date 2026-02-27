@@ -40,21 +40,26 @@ class ImageDataShim {
 /**
  * Fetch the AST2500 decoder JS from a BMC server and return a cached factory function.
  *
- * The decoder is fetched from `http://{host}/libs/kvm/ast/decode_worker.js` using the
+ * The decoder is fetched from `{protocol}//{host}/libs/kvm/ast/decode_worker.js` using the
  * BMC session cookie for authentication. The result is cached per host so subsequent
  * calls for the same BMC return instantly.
  *
  * @param host - BMC hostname (with optional port), e.g. "10.0.0.1" or "bmc.example.com:443"
  * @param sessionCookie - QSESSIONID cookie value for BMC authentication
+ * @param protocol - URL protocol, e.g. "https:" or "http:" (default: "https:")
  * @returns A factory function that creates new decoder instances
  */
-export async function fetchDecoder(host: string, sessionCookie: string): Promise<DecoderFactory> {
+export async function fetchDecoder(
+	host: string,
+	sessionCookie: string,
+	protocol = "https:",
+): Promise<DecoderFactory> {
 	const cached = decoderCache.get(host);
 	if (cached) {
 		return cached;
 	}
 
-	const url = `http://${host}/libs/kvm/ast/decode_worker.js`;
+	const url = `${protocol}//${host}/libs/kvm/ast/decode_worker.js`;
 	const res = await fetch(url, {
 		headers: { Cookie: `QSESSIONID=${sessionCookie}` },
 	});

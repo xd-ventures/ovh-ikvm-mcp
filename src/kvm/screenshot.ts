@@ -56,12 +56,13 @@ export async function captureKvmScreenshot(
 	const session = await establishBmcSession(viewerUrl);
 
 	// Step 2: Connect to KVM WebSocket and capture frame via IVTP protocol
-	const wsProto = viewerUrl.startsWith("https") ? "wss" : "ws";
+	const parsedUrl = new URL(viewerUrl);
+	const wsProto = parsedUrl.protocol === "https:" ? "wss" : "ws";
 	const wsUrl = `${wsProto}://${session.host}/kvm`;
 	const frame = await captureVideoFrame(wsUrl, session, connectTimeout, frameTimeout);
 
 	// Step 3: Fetch decoder from BMC and decode AST2500 tiles to PNG
-	return decodeFrameToPng(frame, session);
+	return decodeFrameToPng(frame, session, parsedUrl.protocol);
 }
 
 /** Video frame data: header info + compressed tile data chunks. */
@@ -325,6 +326,7 @@ async function captureVideoFrame(
 async function decodeFrameToPng(
 	frame: VideoFrame,
 	session: BmcSession,
+	protocol: string,
 ): Promise<KvmScreenshotResult> {
 	const { width, height, headerBytes, compressedChunks, compressSize } = frame;
 
@@ -374,7 +376,7 @@ async function decodeFrameToPng(
 	const recvBuffer = new Int32Array(alignedBuf);
 
 	// Decode using runtime-fetched decoder from BMC
-	const decoderFactory = await fetchDecoder(session.host, session.sessionCookie);
+	const decoderFactory = await fetchDecoder(session.host, session.sessionCookie, protocol);
 	const decoder = decoderFactory();
 	const imageBuffer = createImageData(width, height);
 	decoder.setImageBuffer(imageBuffer);
