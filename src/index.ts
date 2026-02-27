@@ -36,6 +36,7 @@ async function main(): Promise<void> {
 
 	const httpServer = Bun.serve({
 		port: PORT,
+		idleTimeout: 255, // max allowed — screenshot capture can take 30-120s
 		routes: {
 			"/health": () => new Response("ok", { status: 200 }),
 			"/mcp": async (req) => {
