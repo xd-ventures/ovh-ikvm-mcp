@@ -18,7 +18,7 @@
 		"@modelcontextprotocol/sdk": "^1.12.1",
 		"jpeg-js": "^0.4.4",
 		"pngjs": "^7.0.0",
-		"zod": "^3.24.0"
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",
