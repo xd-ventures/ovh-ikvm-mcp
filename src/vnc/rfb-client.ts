@@ -171,8 +171,8 @@ export class RfbClient {
 		}
 
 		// 2. Client responds with version (we use 3.8 or match server)
-		const serverMajor = Number.parseInt(match[1]);
-		const serverMinor = Number.parseInt(match[2]);
+		const serverMajor = Number.parseInt(match[1], 10);
+		const serverMinor = Number.parseInt(match[2], 10);
 		let clientVersion: string;
 		if (serverMajor === 3 && serverMinor >= 8) {
 			clientVersion = "RFB 003.008\n";

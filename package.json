@@ -21,7 +21,7 @@
 		"zod": "^3.24.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.0",
+		"@biomejs/biome": "^2.4.4",
 		"@types/bun": "^1.2.0",
 		"@types/jpeg-js": "^0.3.7",
 		"@types/pngjs": "^6.0.5",
