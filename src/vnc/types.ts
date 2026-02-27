@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 /**
  * RFB (Remote Framebuffer) protocol types.
  * Based on RFC 6143 — The Remote Framebuffer Protocol.

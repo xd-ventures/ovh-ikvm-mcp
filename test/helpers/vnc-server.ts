@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 /**
  * Minimal VNC/RFB server for testing.
  * Serves a known test image over WebSocket using the RFB protocol.

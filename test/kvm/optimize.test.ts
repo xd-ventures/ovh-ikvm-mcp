@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 import { describe, expect, it } from "bun:test";
 import { PNG } from "pngjs";
 import { optimizeForLlm } from "../../src/kvm/optimize.js";
