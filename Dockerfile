@@ -1,11 +1,11 @@
 # Stage 1 — Install production dependencies
-FROM oven/bun:latest AS deps
+FROM oven/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 # Stage 2 — Runtime
-FROM oven/bun:latest
+FROM oven/bun:1
 WORKDIR /app
 
 LABEL org.opencontainers.image.title="ovh-ikvm-mcp" \
