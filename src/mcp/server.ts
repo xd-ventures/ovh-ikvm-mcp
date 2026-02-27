@@ -6,7 +6,7 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { optimizeForLlm } from "../kvm/optimize.js";
 import type { Provider } from "../providers/types.js";
 
