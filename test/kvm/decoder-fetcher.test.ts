@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { clearDecoderCache, fetchDecoder } from "../../src/kvm/decoder-fetcher.js";
 

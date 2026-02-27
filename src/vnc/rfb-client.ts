@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 /**
  * Minimal RFB (VNC) protocol client for screenshot capture.
  * Connects via WebSocket, performs handshake, and captures framebuffer.

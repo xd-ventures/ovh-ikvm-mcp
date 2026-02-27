@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 /**
  * Mock OVH API server for testing.
  * Simulates OVH API endpoints with proper header validation.

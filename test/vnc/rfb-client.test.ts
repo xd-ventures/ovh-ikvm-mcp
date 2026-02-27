@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { RfbClient } from "../../src/vnc/rfb-client.js";
 import { TestVncServer } from "../helpers/vnc-server.js";

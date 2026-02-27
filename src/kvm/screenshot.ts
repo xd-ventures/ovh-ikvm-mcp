@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 ovh-ikvm-mcp contributors
+
 /**
  * KVM screenshot capture via AMI/ASRockRack IVTP WebSocket protocol.
  *
