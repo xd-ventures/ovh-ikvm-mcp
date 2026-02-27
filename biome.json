@@ -19,6 +19,6 @@
 		"lineWidth": 100
 	},
 	"files": {
-		"ignore": ["node_modules", "dist", "bun.lock", "scripts", "src/kvm/vendor"]
+		"ignore": ["node_modules", "dist", "bun.lock", "scripts"]
 	}
 }
