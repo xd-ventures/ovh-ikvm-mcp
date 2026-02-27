@@ -14,6 +14,8 @@
  * - Zero extra setup for users
  */
 
+const DEFAULT_DECODER_FETCH_TIMEOUT = 10_000;
+
 /** Decoder factory: returns a new decoder instance when called. */
 // biome-ignore lint/suspicious/noExplicitAny: vendored decoder has no type definitions
 type DecoderFactory = () => any;
@@ -65,6 +67,7 @@ export async function fetchDecoder(
 	const url = `${protocol}//${host}/libs/kvm/ast/decode_worker.js`;
 	const res = await fetch(url, {
 		headers: { Cookie: `QSESSIONID=${sessionCookie}` },
+		signal: AbortSignal.timeout(DEFAULT_DECODER_FETCH_TIMEOUT),
 	});
 
 	if (!res.ok) {

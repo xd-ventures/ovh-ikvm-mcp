@@ -101,13 +101,15 @@ describe("fetchDecoder", () => {
 			},
 		});
 
-		const host2 = `localhost:${server2.port}`;
+		try {
+			const host2 = `localhost:${server2.port}`;
 
-		const factory1 = await fetchDecoder(host, sessionCookie, "http:");
-		const factory2 = await fetchDecoder(host2, "any-cookie", "http:");
-		expect(factory1).not.toBe(factory2);
-
-		server2.stop(true);
+			const factory1 = await fetchDecoder(host, sessionCookie, "http:");
+			const factory2 = await fetchDecoder(host2, "any-cookie", "http:");
+			expect(factory1).not.toBe(factory2);
+		} finally {
+			server2.stop(true);
+		}
 	});
 
 	it("should clear cache when clearDecoderCache is called", async () => {
@@ -131,12 +133,14 @@ describe("fetchDecoder error handling", () => {
 			},
 		});
 
-		const host = `localhost:${server.port}`;
-		await expect(fetchDecoder(host, "cookie", "http:")).rejects.toThrow(
-			/Failed to fetch decoder.*500/,
-		);
-
-		server.stop(true);
+		try {
+			const host = `localhost:${server.port}`;
+			await expect(fetchDecoder(host, "cookie", "http:")).rejects.toThrow(
+				/Failed to fetch decoder.*500/,
+			);
+		} finally {
+			server.stop(true);
+		}
 	});
 
 	it("should throw when the fetched JS is not valid JavaScript", async () => {
@@ -149,12 +153,14 @@ describe("fetchDecoder error handling", () => {
 			},
 		});
 
-		const host = `localhost:${server.port}`;
-		await expect(fetchDecoder(host, "cookie", "http:")).rejects.toThrow(
-			/Failed to initialize decoder/,
-		);
-
-		server.stop(true);
+		try {
+			const host = `localhost:${server.port}`;
+			await expect(fetchDecoder(host, "cookie", "http:")).rejects.toThrow(
+				/Failed to initialize decoder/,
+			);
+		} finally {
+			server.stop(true);
+		}
 	});
 
 	it("should throw when the fetched JS does not define a Decoder constructor", async () => {
@@ -167,12 +173,14 @@ describe("fetchDecoder error handling", () => {
 			},
 		});
 
-		const host = `localhost:${server.port}`;
-		await expect(fetchDecoder(host, "cookie", "http:")).rejects.toThrow(
-			/Failed to initialize decoder/,
-		);
-
-		server.stop(true);
+		try {
+			const host = `localhost:${server.port}`;
+			await expect(fetchDecoder(host, "cookie", "http:")).rejects.toThrow(
+				/Failed to initialize decoder/,
+			);
+		} finally {
+			server.stop(true);
+		}
 	});
 
 	it("should throw when the server is unreachable", async () => {
