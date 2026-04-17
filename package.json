@@ -28,6 +28,6 @@
 		"@types/bun": "^1.2.0",
 		"@types/jpeg-js": "^0.3.7",
 		"@types/pngjs": "^6.0.5",
-		"typescript": "^5.7.0"
+		"typescript": "^6.0.0"
 	}
 }
